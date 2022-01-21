@@ -5,7 +5,7 @@ use nom::{
     bytes::complete::{tag, take_while_m_n},
     character::complete::{line_ending, multispace0, space0, space1},
     combinator::{all_consuming, map, value},
-    multi::{fill, separated_list1},
+    multi::{fill, separated_list0},
     sequence::{delimited, separated_pair, terminated},
     IResult,
 };
@@ -18,7 +18,7 @@ pub fn parse_board(input: &str) -> IResult<&str, Vec<(Word, CompareResult)>> {
 
     let entry = separated_pair(word, space1, compare_result);
     let line = delimited(space0, entry, space0);
-    let board = terminated(separated_list1(line_ending, line), multispace0);
+    let board = terminated(separated_list0(line_ending, line), multispace0);
     all_consuming(board)(input)
 }
 
