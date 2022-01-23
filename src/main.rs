@@ -1,5 +1,6 @@
 mod lib;
 
+use std::cmp::Ordering;
 use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
@@ -19,28 +20,45 @@ fn main() {
 
     let board_filename = match args.get(1) {
         Some(x) => x,
-        None => panic!("Must specify board file"),
+        None => panic!("Must give arg"),
     };
 
+    match board_filename.as_str() {
+        "test_all" => test_all(),
+        "test_zonae" => test_word("zonae"),
+        _ => next_board(board_filename),
+    }
+}
+
+fn test_word(s: &str) {
+    let words = load_words().expect("failed to load words");
+    let answer: Word = s.parse().unwrap();
+    let mut g = Game::new(&words, &answer);
+
+    run_game_with_answer(&mut g, &answer);
+    println!("{:?}", g.guesses)
+}
+
+fn next_board(filename: &str) {
     let words = load_words().expect("failed to load words");
 
-    if board_filename != "test_all" {
-        let board_raw = fs::read_to_string(board_filename).expect("failed to load board");
-        let board = parser::parse_board(&board_raw)
-            .expect("failed to parse board")
-            .1;
+    let board_raw = fs::read_to_string(filename).expect("failed to load board");
+    let board = parser::parse_board(&board_raw)
+        .expect("failed to parse board")
+        .1;
 
-        let mut possible_words = words.clone();
-        for (guess, res) in board {
-            possible_words.retain(|x| compare_words(&guess, x) == res);
-        }
-
-        for (w, cost) in best_starting_words(&possible_words) {
-            println!("{}: {}", w, cost);
-        }
-
-        return;
+    let mut possible_words = words.clone();
+    for (guess, res) in board {
+        possible_words.retain(|x| compare_words(&guess, x) == res);
     }
+
+    for (w, cost) in best_starting_words(&possible_words) {
+        println!("{}: {}", w, cost);
+    }
+}
+
+fn test_all() {
+    let words = load_words().expect("failed to load words");
 
     let results: Vec<_> = words
         .par_iter()
@@ -105,7 +123,7 @@ fn best_next_word(words: &[Word]) -> &Word {
                 .sum();
             (w, cost)
         })
-        .min_by(|a, b| a.1.partial_cmp(&b.1).unwrap())
+        .min_by(|a, b| compare_floats(a.1, b.1).then_with(|| a.0.cmp(&b.0)))
         .unwrap()
         .0
 }
@@ -132,7 +150,7 @@ fn best_starting_words(words: &[Word]) -> Vec<(Word, f64)> {
         })
         .collect();
 
-    ret.sort_by(|(_, a), (_, b)| a.partial_cmp(&b).unwrap());
+    ret.sort_by(|a, b| compare_floats(a.1, b.1).then_with(|| a.0.cmp(&b.0)));
     ret
 }
 
@@ -146,5 +164,13 @@ fn find_results_distribution(
     for other in words {
         let s = compare_words(next_word, other);
         *out.entry(s).or_insert(0) += 1;
+    }
+}
+
+fn compare_floats(a: f64, b: f64) -> Ordering {
+    if (a - b).abs() < 0.0000000001 {
+        Ordering::Equal
+    } else {
+        a.partial_cmp(&b).unwrap()
     }
 }
