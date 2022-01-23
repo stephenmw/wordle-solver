@@ -2,10 +2,8 @@ mod lib;
 
 use std::collections::HashMap;
 use std::env;
+use std::fmt::Write;
 use std::fs;
-use std::io::prelude::*;
-use std::io::BufWriter;
-use std::sync::atomic::{AtomicU32, Ordering};
 
 use anyhow::Result;
 use rayon::prelude::*;
@@ -44,28 +42,27 @@ fn main() {
         return;
     }
 
-    let file_count = AtomicU32::new(0);
-
-    words
+    let results: Vec<_> = words
         .par_iter()
-        .for_each_init(
-            || {
-                let g = Game::new(&words, &words[0]);
-                let f_num = file_count.fetch_add(1, Ordering::SeqCst);
-                let filename = format!("out_{:03}.txt", f_num);
-                let f = fs::File::create(filename).expect("failed to create file");
-                (BufWriter::new(f), g)
-            },
-            |a, w| {
-                run_game_with_answer(&mut a.1, w);
-                a.0.write_fmt(format_args!("{}:{}", w, &a.1.guesses[0])).unwrap();
-                for guess in &a.1.guesses[1..] {
-                    a.0.write_fmt(format_args!(",{}", guess)).unwrap();
-                }
-                a.0.write_fmt(format_args!("\n")).unwrap();
-                a.0.flush().expect("failed to write");
-            }
-        );
+        .map_with(Game::new(&words, &words[0]), |mut g, w| {
+            run_game_with_answer(&mut g, w);
+            (w, g.guesses.clone())
+        })
+        .collect();
+
+    let mut output = String::new();
+
+    for (w, guesses) in results.iter() {
+        output
+            .write_fmt(format_args!("{}:{}", w, guesses[0]))
+            .unwrap();
+        for g in &guesses[1..] {
+            output.write_fmt(format_args!(",{}", g)).unwrap();
+        }
+        output.write_char('\n').unwrap();
+    }
+
+    print!("{}", output);
 }
 
 fn load_words() -> Result<Vec<Word>> {
