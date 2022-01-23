@@ -81,12 +81,12 @@ fn run_game_with_answer(g: &mut Game, answer: &Word) -> bool {
 
 fn best_next_word(words: &[Word]) -> &Word {
     let mut result_freq = HashMap::new();
+    let avg = words.len() as f64 / (3 as f64).powf(5.0);
+
     words
         .iter()
         .map(|w| {
             find_results_distribution(w, words, &mut result_freq);
-            let avg =
-                result_freq.iter().map(|(_, c)| c).sum::<usize>() as f64 / result_freq.len() as f64;
             let cost: f64 = result_freq
                 .iter()
                 .map(|(_, &c)| (avg - c as f64).powf(2.0))
