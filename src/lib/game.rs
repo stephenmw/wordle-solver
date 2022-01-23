@@ -43,8 +43,8 @@ impl<'a> Game<'a> {
         let new_state = {
             if w == &self.answer {
                 GameState::Success
-            } else if self.guesses.len() >= 6 {
-                GameState::Failure
+            //} else if self.guesses.len() >= 6 {
+            //    GameState::Failure
             } else {
                 GameState::Running
             }
