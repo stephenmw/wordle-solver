@@ -37,7 +37,15 @@ pub enum State {
     NotExists,
 }
 
-pub type CompareResult = [State; 5];
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct CompareResult(u8);
+
+impl From<[State; 5]> for CompareResult {
+    fn from(s: [State; 5]) -> Self {
+        let n = s.iter().copied().fold(0, |acc, x| acc * 3 + x as u8);
+        Self(n)
+    }
+}
 
 pub fn compare_words(guess: &Word, actual: &Word) -> CompareResult {
     let mut actual = actual.0;
@@ -59,5 +67,5 @@ pub fn compare_words(guess: &Word, actual: &Word) -> CompareResult {
         }
     }
 
-    result
+    result.into()
 }

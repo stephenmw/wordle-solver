@@ -32,5 +32,5 @@ fn compare_result(input: &str) -> IResult<&str, CompareResult> {
     };
     let mut buf = [State::NotExists; 5];
     let (rest, _) = fill(state, buf.as_mut_slice())(input)?;
-    Ok((rest, buf))
+    Ok((rest, buf.into()))
 }

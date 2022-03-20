@@ -11,9 +11,7 @@ use rayon::prelude::*;
 
 use lib::game::{Game, GameState};
 use lib::parser;
-use lib::wordle::{compare_words, State, Word};
-
-type CompareResult = [State; 5];
+use lib::wordle::{compare_words, CompareResult, Word};
 
 fn main() {
     let args: Vec<_> = env::args().collect();
