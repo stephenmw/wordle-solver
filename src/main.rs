@@ -1,7 +1,6 @@
 mod lib;
 
 use std::cmp::Ordering;
-use std::collections::HashMap;
 use std::env;
 use std::fmt::Write;
 use std::fs;
@@ -11,7 +10,7 @@ use rayon::prelude::*;
 
 use lib::game::{Game, GameState};
 use lib::parser;
-use lib::wordle::{compare_words, CompareResult, Word};
+use lib::wordle::{compare_words, Word};
 
 fn main() {
     let args: Vec<_> = env::args().collect();
@@ -108,7 +107,7 @@ fn run_game_with_answer(g: &mut Game, answer: &Word) -> bool {
 }
 
 fn best_next_word(words: &[Word]) -> &Word {
-    let mut result_freq = HashMap::new();
+    let mut result_freq = Vec::new();
     let avg = words.len() as f64 / (3 as f64).powf(5.0);
 
     words
@@ -117,7 +116,7 @@ fn best_next_word(words: &[Word]) -> &Word {
             find_results_distribution(w, words, &mut result_freq);
             let cost: f64 = result_freq
                 .iter()
-                .map(|(_, &c)| (avg - c as f64).powf(2.0))
+                .map(|&c| (avg - c as f64).powf(2.0))
                 .sum();
             (w, cost)
         })
@@ -129,12 +128,9 @@ fn best_next_word(words: &[Word]) -> &Word {
 fn best_starting_words(words: &[Word]) -> Vec<(Word, f64)> {
     let all_results: Vec<_> = words
         .par_iter()
-        .map_with(HashMap::new(), |mut freq, w| {
+        .map_with(Vec::new(), |mut freq, w| {
             find_results_distribution(w, &words, &mut freq);
-            let res: Vec<_> = freq
-                .drain()
-                //.filter(|(x, _)| x != &[State::CorrectLocation; 5])
-                .collect();
+            let res: Vec<_> = freq.drain(..).collect();
             (w, res)
         })
         .collect();
@@ -142,8 +138,8 @@ fn best_starting_words(words: &[Word]) -> Vec<(Word, f64)> {
     let mut ret: Vec<_> = all_results
         .iter()
         .map(|(w, res)| {
-            let avg = res.iter().map(|(_, c)| c).sum::<usize>() as f64 / res.len() as f64;
-            let cost: f64 = res.iter().map(|&(_, c)| (avg - c as f64).powf(2.0)).sum();
+            let avg = res.iter().map(|&c| c as usize).sum::<usize>() as f64 / res.len() as f64;
+            let cost: f64 = res.iter().map(|&c| (avg - c as f64).powf(2.0)).sum();
             (**w, cost)
         })
         .collect();
@@ -152,16 +148,13 @@ fn best_starting_words(words: &[Word]) -> Vec<(Word, f64)> {
     ret
 }
 
-fn find_results_distribution(
-    next_word: &Word,
-    words: &[Word],
-    out: &mut HashMap<CompareResult, usize>,
-) {
-    out.clear();
+fn find_results_distribution(next_word: &Word, words: &[Word], out: &mut Vec<u16>) {
+    out.truncate(0);
+    out.resize(243, 0); // 243 is the number of possible CompareResults
 
     for other in words {
-        let s = compare_words(next_word, other);
-        *out.entry(s).or_insert(0) += 1;
+        let res: usize = compare_words(next_word, other).into();
+        out[res] += 1
     }
 }
 

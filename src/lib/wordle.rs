@@ -47,6 +47,12 @@ impl From<[State; 5]> for CompareResult {
     }
 }
 
+impl Into<usize> for CompareResult {
+    fn into(self) -> usize {
+        self.0 as usize
+    }
+}
+
 pub fn compare_words(guess: &Word, actual: &Word) -> CompareResult {
     let mut actual = actual.0;
     let mut result = [State::NotExists; 5];
